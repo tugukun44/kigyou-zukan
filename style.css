@@ -1,0 +1,74 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
+  background: #f6f7f9;
+  color: #222;
+}
+header {
+  padding: 24px 18px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+}
+header h1 { margin: 0 0 6px; font-size: 24px; }
+header p { margin: 0; color: #666; font-size: 14px; }
+main { max-width: 900px; margin: auto; padding: 20px 16px 50px; }
+h2 { font-size: 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.card, .panel {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+}
+.card { cursor: pointer; }
+.card:hover { border-color: #888; }
+.card h3 { margin: 0 0 8px; }
+.meta { color: #666; font-size: 14px; }
+.tag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eee;
+  font-size: 12px;
+}
+button {
+  border: 1px solid #bbb;
+  background: white;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+button.primary { margin-top: 10px; }
+.hidden { display: none; }
+.section { margin-top: 18px; }
+.section h3 { border-bottom: 1px solid #ddd; padding-bottom: 7px; }
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 10px 0;
+  padding: 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: white;
+}
+textarea {
+  width: 100%;
+  min-height: 130px;
+  padding: 12px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font: inherit;
+}
+.notice {
+  margin-top: 14px;
+  padding: 12px;
+  background: #f0f0f0;
+  border-radius: 8px;
+}

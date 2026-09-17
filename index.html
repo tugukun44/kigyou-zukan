@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>若旦那版・企業図鑑</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>若旦那版・企業図鑑</h1>
+    <p>企業を見る目を育てる、自分専用の企業研究・投資学習システム</p>
+  </header>
+
+  <main>
+    <section id="company-list" class="view">
+      <h2>企業一覧</h2>
+      <div id="companies" class="grid"></div>
+    </section>
+
+    <section id="company-detail" class="view hidden">
+      <button onclick="showList()">← 企業一覧へ</button>
+      <div id="detail"></div>
+    </section>
+
+    <section id="hypothesis" class="view hidden">
+      <button onclick="showList()">← 企業一覧へ</button>
+      <div id="hypothesis-content"></div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

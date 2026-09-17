@@ -1,0 +1,72 @@
+const companies = [
+  {
+    code: "4063",
+    name: "信越化学工業",
+    status: "保有",
+    like: "★★★★★",
+    evaluation: "4.8",
+    medium: "★★★★☆",
+    long: "★★★★★",
+    reason: "長期で観察する土台企業",
+    strengths: ["高い技術力", "世界市場での競争力"],
+    risks: ["景気循環", "半導体・素材市況"],
+    mediumView: "業績、半導体需要、素材市況、設備投資を追う。",
+    longView: "技術蓄積、競争優位性、世界で必要とされ続けるかを見る。"
+  },
+  {
+    code: "4901",
+    name: "富士フイルムHD",
+    status: "保有",
+    like: "★★★★★",
+    evaluation: "4.7",
+    medium: "★★★★☆",
+    long: "★★★★★",
+    reason: "事業転換と複数事業の成長を観察",
+    strengths: ["事業ポートフォリオ", "技術の横展開"],
+    risks: ["事業ごとの成長差", "投資負担"],
+    mediumView: "ヘルスケア・半導体材料などの成長と利益率を見る。",
+    longView: "技術・顧客基盤・事業転換の持続性を見る。"
+  },
+  {
+    code: "8306",
+    name: "三菱UFJ FG",
+    status: "保有",
+    like: "★★★★☆",
+    evaluation: "4.5",
+    medium: "★★★★☆",
+    long: "★★★★☆",
+    reason: "金利環境と銀行収益構造を観察",
+    strengths: ["顧客基盤", "金融事業の規模"],
+    risks: ["景気悪化", "金利・信用コスト"],
+    mediumView: "金利、貸出、利ざや、信用コストを見る。",
+    longView: "金融構造の変化と資本配分を見る。"
+  },
+  {
+    code: "5595",
+    name: "QPS研究所",
+    status: "保有・監視",
+    like: "★★★★☆",
+    evaluation: "—",
+    medium: "—",
+    long: "—",
+    reason: "衛星データ需要と事業拡大を観察",
+    strengths: ["小型SAR衛星技術", "宇宙データ事業"],
+    risks: ["成長投資", "事業計画の進捗"],
+    mediumView: "衛星打上げ、受注、売上成長、利益化への進捗を見る。",
+    longView: "衛星コンステレーションとデータ事業の競争優位性を見る。"
+  },
+  {
+    code: "5698",
+    name: "エンビプロHD",
+    status: "監視",
+    like: "★★★★★",
+    evaluation: "—",
+    medium: "—",
+    long: "—",
+    reason: "資源循環・リサイクルの構造変化を観察",
+    strengths: ["資源循環", "リサイクル事業の蓄積"],
+    risks: ["資源価格", "利益の変動性"],
+    mediumView: "処理量、資源価格、利益の質、新規事業を見る。",
+    longView: "循環経済の拡大と企業の競争優位性を見る。"
+  }
+];
