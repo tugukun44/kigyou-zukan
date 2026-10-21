@@ -141,3 +141,25 @@ function renderCompanies() {
 }
 
 renderCompanies();
+// Supabase接続確認用
+async function testSupabaseConnection() {
+  const result = document.createElement("p");
+  result.id = "supabase-status";
+  result.textContent = "Supabase接続を確認中...";
+  document.querySelector("main").prepend(result);
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("companies")
+      .select("stock_code, company_name")
+      .limit(5);
+
+    if (error) throw error;
+
+    result.textContent =
+      "Supabase接続成功：" +
+      data.map(c => `${c.company_name}（${c.stock_code}）`).join("、");
+  } catch (error) {
+    result.textContent = "接続エラー：" + error.message;
+  }
+}
