@@ -135,27 +135,47 @@ function chooseHypothesis(option) {
   `;
 }
 
-function saveHypothesis() {
+
+async function saveHypothesis() {
   const reason = document.getElementById("reason").value.trim();
+  const result = document.getElementById("save-result");
+
   if (!reason) {
-    document.getElementById("save-result").innerHTML =
+    result.innerHTML =
       `<div class="notice">理由を1文でも書いてから保存してください。</div>`;
     return;
   }
 
+  const { data: { user }, error: userError } =
+    await window.supabaseClient.auth.getUser();
+
+  if (userError || !user) {
+    result.innerHTML =
+      `<div class="notice">ログインしてください。記録は保存されていません。</div>`;
+    return;
+  }
+
   const record = {
-    savedAt: new Date().toISOString(),
-    company: selectedCompany.name,
-    code: selectedCompany.code,
+    user_id: user.id,
+    company_name: selectedCompany.name,
+    stock_code: selectedCompany.code,
     hypothesis: selectedHypothesis,
-    reason
+    reason: reason
   };
 
-  const saved = JSON.parse(localStorage.getItem("hypotheses") || "[]");
-  saved.push(record);
-  localStorage.setItem("hypotheses", JSON.stringify(saved));
+  result.textContent = "保存中...";
 
-  document.getElementById("save-result").innerHTML = `
+  const { error } = await window.supabaseClient
+    .from("hypotheses")
+    .insert(record);
+
+  if (error) {
+    result.innerHTML =
+      `<div class="notice">保存に失敗しました：${error.message}</div>`;
+    return;
+  }
+
+  result.innerHTML = `
     <div class="notice">
       保存しました。<br>
       この時点の仮説と理由を、後から振り返れる形で記録しています。
