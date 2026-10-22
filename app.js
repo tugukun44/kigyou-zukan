@@ -163,3 +163,45 @@ async function testSupabaseConnection() {
     result.textContent = "接続エラー：" + error.message;
   }
 }
+// Supabaseログイン画面
+const loginPanel = document.createElement("section");
+loginPanel.className = "panel";
+loginPanel.innerHTML = `
+  <h2>データベース接続テスト</h2>
+  <form id="supabase-login-form">
+    <p>
+      <label>tugukun44@yahoo.co.jp<br>
+        <input id="supabase-email" type="email" required>
+      </label>
+    </p>
+    <p>
+      <label>tora2cat<br>
+        <input id="supabase-password" type="password" required>
+      </label>
+    </p>
+    <button class="primary" type="submit">ログインして接続確認</button>
+    <p id="login-result" aria-live="polite"></p>
+  </form>
+`;
+document.querySelector("main").prepend(loginPanel);
+
+document.getElementById("supabase-login-form")
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const result = document.getElementById("login-result");
+    result.textContent = "ログイン中...";
+
+    const { error } = await window.supabaseClient.auth.signInWithPassword({
+      email: document.getElementById("supabase-email").value.trim(),
+      password: document.getElementById("supabase-password").value
+    });
+
+    if (error) {
+      result.textContent = "ログインエラー：" + error.message;
+      return;
+    }
+
+    result.textContent = "ログイン成功。データを取得しています...";
+    await testSupabaseConnection();
+  });
