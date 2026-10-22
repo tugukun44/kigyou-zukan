@@ -170,13 +170,13 @@ loginPanel.innerHTML = `
   <h2>データベース接続テスト</h2>
   <form id="supabase-login-form">
     <p>
-      <label>tugukun44@yahoo.co.jp<br>
-        <input id="supabase-email" type="email" required>
+      <label>メールアドレス<br>
+        <input id="tugukun44@yahoo.co.jp" type="email" required>
       </label>
     </p>
     <p>
-      <label>tora2cat<br>
-        <input id="supabase-password" type="password" required>
+      <label>パスワード<br>
+        <input id="tora2cat" type="password" required>
       </label>
     </p>
     <button class="primary" type="submit">ログインして接続確認</button>
