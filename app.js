@@ -6,55 +6,91 @@ function showList() {
   document.getElementById("company-list").classList.remove("hidden");
 }
 
-function openCompany(code) {
-  selectedCompany = companies.find(c => c.code === code);
-  const c = selectedCompany;
 
-  document.getElementById("detail").innerHTML = `
-    <h2>${c.name} <span class="meta">(${c.code})</span></h2>
-    <span class="tag">${c.status}</span>
+async function openCompany(code) {
+  const detail = document.getElementById("detail");
+  detail.innerHTML = "<p>企業情報を取得中...</p>";
 
-    <div class="section panel">
-      <h3>30秒結論</h3>
-      <p>${c.reason}</p>
-    </div>
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("companies")
+      .select("*")
+      .eq("stock_code", code)
+      .single();
 
-    <div class="section panel">
-      <h3>評価</h3>
-      <p>好き度：${c.like}</p>
-      <p>企業評価：${c.evaluation}</p>
-      <p>中期：${c.medium}</p>
-      <p>長期：${c.long}</p>
-    </div>
+    if (error) throw error;
 
-    <div class="section panel">
-      <h3>強み</h3>
-      <ul>${c.strengths.map(x => `<li>${x}</li>`).join("")}</ul>
-    </div>
+    const c = {
+      code: data.stock_code,
+      name: data.company_name,
+      status: data.status,
+      like: data.like,
+      evaluation: data.evaluation ?? "—",
+      medium: data.medium,
+      long: data.long,
+      reason: data.reason,
+      strengths: data.strengths || [],
+      risks: data.risks || [],
+      mediumView: data.medium_view,
+      longView: data.long_view
+    };
 
-    <div class="section panel">
-      <h3>リスク</h3>
-      <ul>${c.risks.map(x => `<li>${x}</li>`).join("")}</ul>
-    </div>
+    selectedCompany = c;
 
-    <div class="section panel">
-      <h3>中期の見方</h3>
-      <p>${c.mediumView}</p>
-    </div>
+    detail.innerHTML = `
+      <h2>${c.name} <span class="meta">(${c.code})</span></h2>
+      <span class="tag">${c.status}</span>
 
-    <div class="section panel">
-      <h3>長期の見方</h3>
-      <p>${c.longView}</p>
-    </div>
+      <div class="section panel">
+        <h3>30秒結論</h3>
+        <p>${c.reason}</p>
+      </div>
 
-    <button class="primary" onclick="openHypothesis('${c.code}')">
-      この会社で仮説トレーニング
-    </button>
-  `;
+      <div class="section panel">
+        <h3>評価</h3>
+        <p>好き度：${c.like}</p>
+        <p>企業評価：${c.evaluation}</p>
+        <p>中期：${c.medium}</p>
+        <p>長期：${c.long}</p>
+      </div>
 
-  document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
-  document.getElementById("company-detail").classList.remove("hidden");
+      <div class="section panel">
+        <h3>強み</h3>
+        <ul>${c.strengths.map(x => `<li>${x}</li>`).join("")}</ul>
+      </div>
+
+      <div class="section panel">
+        <h3>リスク</h3>
+        <ul>${c.risks.map(x => `<li>${x}</li>`).join("")}</ul>
+      </div>
+
+      <div class="section panel">
+        <h3>中期の見方</h3>
+        <p>${c.mediumView}</p>
+      </div>
+
+      <div class="section panel">
+        <h3>長期の見方</h3>
+        <p>${c.longView}</p>
+      </div>
+
+      <button class="primary" onclick="openHypothesis('${c.code}')">
+        この会社で仮説トレーニング
+      </button>
+    `;
+
+    document.querySelectorAll(".view")
+      .forEach(v => v.classList.add("hidden"));
+
+    document.getElementById("company-detail")
+      .classList.remove("hidden");
+
+  } catch (error) {
+    detail.innerHTML =
+      `<p>企業情報の取得に失敗しました：${error.message}</p>`;
+  }
 }
+
 
 function openHypothesis(code) {
   selectedCompany = companies.find(c => c.code === code);
