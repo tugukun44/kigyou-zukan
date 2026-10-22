@@ -171,12 +171,12 @@ loginPanel.innerHTML = `
   <form id="supabase-login-form">
     <p>
       <label>メールアドレス<br>
-        <input id="tugukun44@yahoo.co.jp" type="email" required>
+        <input id="supabase-email" type="email" required>
       </label>
     </p>
     <p>
       <label>パスワード<br>
-        <input id="tora2cat" type="password" required>
+        <input id="supabase-password" type="password" required>
       </label>
     </p>
     <button class="primary" type="submit">ログインして接続確認</button>
