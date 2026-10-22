@@ -127,17 +127,36 @@ function saveHypothesis() {
   `;
 }
 
-function renderCompanies() {
-  document.getElementById("companies").innerHTML = companies.map(c => `
-    <div class="card" onclick="openCompany('${c.code}')">
-      <h3>${c.name}</h3>
-      <div class="meta">${c.code}</div>
-      <span class="tag">${c.status}</span>
-      <p>好き度：${c.like}</p>
-      <p>企業評価：${c.evaluation}</p>
-      <p>中期：${c.medium}　長期：${c.long}</p>
-    </div>
-  `).join("");
+async function renderCompanies() {
+  const container = document.getElementById("companies");
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("companies")
+      .select("stock_code, company_name")
+      .order("stock_code");
+
+    if (error) throw error;
+
+    container.innerHTML = data.map(c => `
+      <div class="card" onclick="openCompany('${c.stock_code}')">
+        <h3>${c.company_name}</h3>
+        <div class="meta">${c.stock_code}</div>
+      </div>
+    `).join("");
+
+  } catch (error) {
+    container.innerHTML = companies.map(c => `
+      <div class="card" onclick="openCompany('${c.code}')">
+        <h3>${c.name}</h3>
+        <div class="meta">${c.code}</div>
+        <span class="tag">${c.status}</span>
+        <p>好き度：${c.like}</p>
+        <p>企業評価：${c.evaluation}</p>
+        <p>中期：${c.medium}　長期：${c.long}</p>
+      </div>
+    `).join("");
+  }
 }
 
 renderCompanies();
@@ -204,4 +223,5 @@ document.getElementById("supabase-login-form")
 
     result.textContent = "ログイン成功。データを取得しています...";
     await testSupabaseConnection();
+await renderCompanies();
   });
