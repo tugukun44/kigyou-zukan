@@ -330,3 +330,13 @@ function escapeHypothesisText(value) {
     "'": "&#39;"
   })[char]);
 }
+
+function showHypothesisHistory() {
+  document.querySelectorAll(".view")
+    .forEach(v => v.classList.add("hidden"));
+
+  document.getElementById("hypothesis-history")
+    .classList.remove("hidden");
+
+  loadHypothesisHistory();
+}
