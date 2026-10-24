@@ -281,3 +281,52 @@ document.getElementById("supabase-login-form")
     await testSupabaseConnection();
 await renderCompanies();
   });
+
+
+async function loadHypothesisHistory() {
+  const container = document.getElementById("hypothesis-history-content");
+  container.textContent = "記録を読み込み中...";
+
+  const { data: { user }, error: userError } =
+    await window.supabaseClient.auth.getUser();
+
+  if (userError || !user) {
+    container.textContent = "ログインしてください。";
+    return;
+  }
+
+  const { data, error } = await window.supabaseClient
+    .from("hypotheses")
+    .select("saved_at, company_name, stock_code, hypothesis, reason")
+    .eq("user_id", user.id)
+    .order("saved_at", { ascending: false });
+
+  if (error) {
+    container.textContent = "記録の取得に失敗しました：" + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.textContent = "保存された仮説記録はまだありません。";
+    return;
+  }
+
+  container.innerHTML = data.map(record => `
+    <div class="panel">
+      <h3>${escapeHypothesisText(record.company_name)}（${escapeHypothesisText(record.stock_code)}）</h3>
+      <p>保存日時：${escapeHypothesisText(new Date(record.saved_at).toLocaleString("ja-JP"))}</p>
+      <p>選んだ仮説：${escapeHypothesisText(record.hypothesis)}</p>
+      <p>理由：${escapeHypothesisText(record.reason)}</p>
+    </div>
+  `).join("");
+}
+
+function escapeHypothesisText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
