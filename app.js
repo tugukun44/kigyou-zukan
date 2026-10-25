@@ -187,36 +187,65 @@ async function renderCompanies() {
   const container = document.getElementById("companies");
 
   try {
-    const { data, error } = await window.supabaseClient
-      .from("companies")
-      .select("stock_code, company_name")
-      .order("stock_code");
+    // 企業一覧を取得
+    const { data: companiesData, error: companiesError } =
+      await window.supabaseClient
+        .from("companies")
+        .select("id, stock_code, company_name")
+        .order("stock_code");
 
-    if (error) throw error;
+    if (companiesError) throw companiesError;
 
-    container.innerHTML = data.map(c => `
-      <div class="card" onclick="openCompany('${c.stock_code}')">
-        <h3>${c.company_name}</h3>
-        <div class="meta">${c.stock_code}</div>
-      </div>
-    `).join("");
+    // 企業ごとの最新株価を取得
+    const { data: pricesData, error: pricesError } =
+      await window.supabaseClient
+        .from("stock_latest")
+        .select("company_id, close_price, target_date");
+
+    if (pricesError) throw pricesError;
+
+    // company_id をキーに最新株価を対応づける
+    const pricesByCompanyId = new Map(
+      (pricesData || []).map(price => [
+        String(price.company_id),
+        price
+      ])
+    );
+
+    // 企業一覧を描画
+    container.innerHTML = companiesData.map(company => {
+      const price = pricesByCompanyId.get(String(company.id));
+
+      const latestPrice = price
+        ? `${Number(price.close_price).toLocaleString("ja-JP")}円`
+        : "株価データなし";
+
+      const priceDate = price
+        ? `対象日：${escapeHypothesisText(price.target_date)}`
+        : "対象日：—";
+
+      return `
+        <div class="card" onclick="openCompany('${company.stock_code}')">
+          <h3>${escapeHypothesisText(company.company_name)}</h3>
+          <div class="meta">${escapeHypothesisText(company.stock_code)}</div>
+          <p>最新終値：<strong>${latestPrice}</strong></p>
+          <p class="meta">${priceDate}</p>
+        </div>
+      `;
+    }).join("");
 
   } catch (error) {
-    container.innerHTML = companies.map(c => `
-      <div class="card" onclick="openCompany('${c.code}')">
-        <h3>${c.name}</h3>
-        <div class="meta">${c.code}</div>
-        <span class="tag">${c.status}</span>
-        <p>好き度：${c.like}</p>
-        <p>企業評価：${c.evaluation}</p>
-        <p>中期：${c.medium}　長期：${c.long}</p>
+    console.error("企業一覧の取得に失敗しました:", error);
+    container.innerHTML = `
+      <div class="notice">
+        企業データまたは株価データの取得に失敗しました。
+        詳細はブラウザのコンソールを確認してください。
       </div>
-    `).join("");
+    `;
   }
 }
-
 renderCompanies();
-// Supabase接続確認用
+
 async function testSupabaseConnection() {
   const result = document.createElement("p");
   result.id = "supabase-status";
