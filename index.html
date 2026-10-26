@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -13,15 +14,15 @@
   </header>
 
   <main>
-  <section id="company-list" class="view">
-  <h2>企業一覧</h2>
+    <section id="company-list" class="view">
+      <h2>企業一覧</h2>
 
-  <button class="primary" onclick="showHypothesisHistory()">
-    仮説トレーニングの記録を見る
-  </button>
+      <button class="primary" onclick="showHypothesisHistory()">
+        仮説トレーニングの記録を見る
+      </button>
 
-  <div id="companies" class="grid"></div>
-</section>
+      <div id="companies" class="grid"></div>
+    </section>
 
     <section id="company-detail" class="view hidden">
       <button onclick="showList()">← 企業一覧へ</button>
@@ -29,23 +30,27 @@
     </section>
 
     <section id="hypothesis" class="view hidden">
-  <button onclick="showList()">← 企業一覧へ</button>
-  <div id="hypothesis-content"></div>
-</section>
+      <button onclick="showList()">← 企業一覧へ</button>
+      <div id="hypothesis-content"></div>
+    </section>
 
-<section id="hypothesis-history" class="view hidden">
-  <button onclick="showList()">← 企業一覧へ</button>
-  <h2>仮説トレーニングの記録</h2>
-  <button class="primary" onclick="loadHypothesisHistory()">
-    記録を更新
-  </button>
-  <div id="hypothesis-history-content"></div>
-</section>
- 
+    <section id="hypothesis-history" class="view hidden">
+      <button onclick="showList()">← 企業一覧へ</button>
+      <h2>仮説トレーニングの記録</h2>
+
+      <button class="primary" onclick="loadHypothesisHistory()">
+        記録を更新
+      </button>
+
+      <div id="hypothesis-history-content"></div>
+    </section>
   </main>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="stock-import.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
+
