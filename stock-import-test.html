@@ -1,0 +1,91 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>株価取込テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>株価取込処理テスト</h1>
+  <p>このテストはデータベースへの保存を行いません。</p>
+  <div id="results">テスト実行中...</div>
+
+  <script src="stock-import.js"></script>
+  <script>
+    const results = [];
+
+    function test(name, callback) {
+      try {
+        callback();
+        results.push({ name, pass: true });
+      } catch (error) {
+        results.push({
+          name,
+          pass: false,
+          message: error.message
+        });
+      }
+    }
+
+    const validRecord = {
+      company_id: 1,
+      target_date: "2026-10-26",
+      close_price: 6550,
+      volume: 1000,
+      source: "test"
+    };
+
+    test("正常な株価データを受け入れる", () => {
+      window.stockImporter.validatePrice(validRecord);
+    });
+
+    test("終値が0なら拒否する", () => {
+      window.stockImporter.validatePrice({
+        ...validRecord,
+        close_price: 0
+      });
+      throw new Error("不正データが拒否されませんでした");
+    });
+
+    test("存在しない日付を拒否する", () => {
+      window.stockImporter.validatePrice({
+        ...validRecord,
+        target_date: "2026-02-30"
+      });
+      throw new Error("不正な日付が拒否されませんでした");
+    });
+
+    test("企業IDが文字列なら拒否する", () => {
+      window.stockImporter.validatePrice({
+        ...validRecord,
+        company_id: "abc"
+      });
+      throw new Error("不正な企業IDが拒否されませんでした");
+    });
+
+    const passed = results.filter(item => item.pass).length;
+    const failed = results.length - passed;
+
+    document.getElementById("results").innerHTML =
+      `<h2>${passed}/${results.length} 件成功</h2>` +
+      `<p class="${failed ? "fail" : "pass"}">` +
+      (failed ? `${failed} 件失敗` : "すべてのテストに成功") +
+      `</p><pre>${results.map(item =>
+        `${item.pass ? "PASS" : "FAIL"}：${item.name}` +
+        (item.message ? `（${item.message}）` : "")
+      ).join("\n")}</pre>`;
+  </script>
+</body>
+</html>
