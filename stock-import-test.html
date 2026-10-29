@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>株価取込処理テスト</h1>
-  <p>このテストはデータベースへの保存を行いません。</p>
+  <p>データベースへの保存は行いません。</p>
   <div id="results">テスト実行中...</div>
 
   <script src="stock-import.js"></script>
@@ -39,6 +39,20 @@
       }
     }
 
+    function testRejects(name, callback) {
+      let rejected = false;
+
+      try {
+        callback();
+      } catch (error) {
+        rejected = true;
+      }
+
+      if (!rejected) {
+        throw new Error("不正データが拒否されませんでした");
+      }
+    }
+
     const validRecord = {
       company_id: 1,
       target_date: "2026-10-26",
@@ -52,27 +66,30 @@
     });
 
     test("終値が0なら拒否する", () => {
-      window.stockImporter.validatePrice({
-        ...validRecord,
-        close_price: 0
-      });
-      throw new Error("不正データが拒否されませんでした");
+      testRejects("終値0", () =>
+        window.stockImporter.validatePrice({
+          ...validRecord,
+          close_price: 0
+        })
+      );
     });
 
     test("存在しない日付を拒否する", () => {
-      window.stockImporter.validatePrice({
-        ...validRecord,
-        target_date: "2026-02-30"
-      });
-      throw new Error("不正な日付が拒否されませんでした");
+      testRejects("不正日付", () =>
+        window.stockImporter.validatePrice({
+          ...validRecord,
+          target_date: "2026-02-30"
+        })
+      );
     });
 
     test("企業IDが文字列なら拒否する", () => {
-      window.stockImporter.validatePrice({
-        ...validRecord,
-        company_id: "abc"
-      });
-      throw new Error("不正な企業IDが拒否されませんでした");
+      testRejects("不正ID", () =>
+        window.stockImporter.validatePrice({
+          ...validRecord,
+          company_id: "abc"
+        })
+      );
     });
 
     const passed = results.filter(item => item.pass).length;
