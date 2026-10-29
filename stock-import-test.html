@@ -12,9 +12,18 @@
       line-height: 1.6;
       overflow-wrap: anywhere;
     }
-    .pass { color: green; }
-    .fail { color: red; }
-    pre { white-space: pre-wrap; }
+
+    .pass {
+      color: green;
+    }
+
+    .fail {
+      color: red;
+    }
+
+    pre {
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -27,21 +36,26 @@
     const results = [];
 
     function test(name, callback) {
-      try {
-        callback();
-        results.push({ name, pass: true });
-      } catch (error) {
-        results.push({
-          name,
-          pass: false,
-          message: error.message
+      return Promise.resolve()
+        .then(callback)
+        .then(() => {
+          results.push({
+            name,
+            pass: true
+          });
+        })
+        .catch(error => {
+          results.push({
+            name,
+            pass: false,
+            message: error.message
+          });
         });
-      }
     }
 
     async function runTests() {
       const originalClient = window.supabaseClient;
-      let calls = [];
+      const calls = [];
 
       function createFakeClient() {
         return {
@@ -53,6 +67,7 @@
             return {
               upsert(payload, options) {
                 calls.push({ payload, options });
+
                 return Promise.resolve({
                   error: null,
                   count: payload.length
@@ -72,63 +87,95 @@
       try {
         window.supabaseClient = createFakeClient();
 
-        const result = await window.stockImporter.savePrices([
-          { ...base, company_id: 1 },
-          { ...base, company_id: 2, close_price: 3000 }
-        ]);
+        await test(
+          "複数銘柄をまとめて保存要求できる",
+          async () => {
+            const result =
+              await window.stockImporter.savePrices([
+                { ...base, company_id: 1 },
+                {
+                  ...base,
+                  company_id: 2,
+                  close_price: 3000
+                }
+              ]);
 
-        test("複数銘柄をまとめて保存要求できる", () => {
-          if (calls.length !== 1) {
-            throw new Error("保存要求が1回ではありません");
-          }
-          if (calls[0].payload.length !== 2) {
-            throw new Error("2件のデータが送られていません");
-          }
-          if (result.submitted !== 2) {
-            throw new Error("送信件数が一致しません");
-          }
-        });
+            if (calls.length !== 1) {
+              throw new Error("保存要求が1回ではありません");
+            }
 
-        test("企業IDと日付を重複判定キーに指定する", () => {
-          const options = calls[0].options;
-          if (options.onConflict !== "company_id,target_date") {
-            throw new Error("重複判定キーが不正です");
-          }
-          if (options.ignoreDuplicates !== true) {
-            throw new Error("重複データのスキップ設定がありません");
-          }
-        });
+            if (calls[0].payload.length !== 2) {
+              throw new Error("2件のデータが送られていません");
+            }
 
-        test("入力内の同一企業・同一日付を拒否する", () => {
-          let rejected = false;
-          try {
-            window.stockImporter.savePrices([
-              { ...base, company_id: 1 },
-              { ...base, company_id: 1 }
-            ]);
-          } catch (error) {
-            rejected = true;
+            if (result.submitted !== 2) {
+              throw new Error("送信件数が一致しません");
+            }
           }
-          if (!rejected) {
-            throw new Error("重複入力が拒否されませんでした");
-          }
-        });
+        );
 
-        test("不正な終値を拒否する", () => {
-          let rejected = false;
-          try {
-            window.stockImporter.validatePrice({
-              ...base,
-              company_id: 1,
-              close_price: 0
-            });
-          } catch (error) {
-            rejected = true;
+        await test(
+          "企業IDと日付を重複判定キーに指定する",
+          () => {
+            const options = calls[0].options;
+
+            if (
+              options.onConflict !== "company_id,target_date"
+            ) {
+              throw new Error("重複判定キーが不正です");
+            }
+
+            if (options.ignoreDuplicates !== true) {
+              throw new Error("重複データのスキップ設定がありません");
+            }
           }
-          if (!rejected) {
-            throw new Error("終値0が拒否されませんでした");
+        );
+
+        await test(
+          "入力内の同一企業・同一日付を拒否する",
+          async () => {
+            const callsBefore = calls.length;
+            let rejected = false;
+
+            try {
+              await window.stockImporter.savePrices([
+                { ...base, company_id: 1 },
+                { ...base, company_id: 1 }
+              ]);
+            } catch (error) {
+              rejected = true;
+            }
+
+            if (!rejected) {
+              throw new Error("重複入力が拒否されませんでした");
+            }
+
+            if (calls.length !== callsBefore) {
+              throw new Error("重複データが保存要求されました");
+            }
           }
-        });
+        );
+
+        await test(
+          "不正な終値を拒否する",
+          () => {
+            let rejected = false;
+
+            try {
+              window.stockImporter.validatePrice({
+                ...base,
+                company_id: 1,
+                close_price: 0
+              });
+            } catch (error) {
+              rejected = true;
+            }
+
+            if (!rejected) {
+              throw new Error("終値0が拒否されませんでした");
+            }
+          }
+        );
 
       } catch (error) {
         results.push({
@@ -140,20 +187,32 @@
         window.supabaseClient = originalClient;
       }
 
-      const passed = results.filter(item => item.pass).length;
+      const passed =
+        results.filter(item => item.pass).length;
       const failed = results.length - passed;
 
       document.getElementById("results").innerHTML =
         `<h2>${passed}/${results.length} 件成功</h2>` +
         `<p class="${failed ? "fail" : "pass"}">` +
-        (failed ? `${failed} 件失敗` : "すべてのテストに成功") +
-        `</p><pre>${results.map(item =>
+        (
+          failed
+            ? `${failed} 件失敗`
+            : "すべてのテストに成功"
+        ) +
+        `</p><pre>` +
+        results.map(item =>
           `${item.pass ? "PASS" : "FAIL"}：${item.name}` +
-          (item.message ? `（${item.message}）` : "")
-        ).join("\n")}</pre>`;
+          (
+            item.message
+              ? `（${item.message}）`
+              : ""
+          )
+        ).join("\n") +
+        `</pre>`;
     }
 
     runTests();
   </script>
 </body>
 </html>
+
