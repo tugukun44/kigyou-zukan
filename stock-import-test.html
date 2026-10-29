@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>株価取込処理テスト</h1>
-  <p>データベースへの保存は行いません。</p>
+  <p>Supabaseへの実保存は行いません。</p>
   <div id="results">テスト実行中...</div>
 
   <script src="stock-import.js"></script>
@@ -39,70 +39,121 @@
       }
     }
 
-    function testRejects(name, callback) {
-      let rejected = false;
+    async function runTests() {
+      const originalClient = window.supabaseClient;
+      let calls = [];
+
+      function createFakeClient() {
+        return {
+          from(table) {
+            if (table !== "stock_prices") {
+              throw new Error("想定外のテーブルです");
+            }
+
+            return {
+              upsert(payload, options) {
+                calls.push({ payload, options });
+                return Promise.resolve({
+                  error: null,
+                  count: payload.length
+                });
+              }
+            };
+          }
+        };
+      }
+
+      const base = {
+        target_date: "2026-10-26",
+        close_price: 6550,
+        source: "test"
+      };
 
       try {
-        callback();
+        window.supabaseClient = createFakeClient();
+
+        const result = await window.stockImporter.savePrices([
+          { ...base, company_id: 1 },
+          { ...base, company_id: 2, close_price: 3000 }
+        ]);
+
+        test("複数銘柄をまとめて保存要求できる", () => {
+          if (calls.length !== 1) {
+            throw new Error("保存要求が1回ではありません");
+          }
+          if (calls[0].payload.length !== 2) {
+            throw new Error("2件のデータが送られていません");
+          }
+          if (result.submitted !== 2) {
+            throw new Error("送信件数が一致しません");
+          }
+        });
+
+        test("企業IDと日付を重複判定キーに指定する", () => {
+          const options = calls[0].options;
+          if (options.onConflict !== "company_id,target_date") {
+            throw new Error("重複判定キーが不正です");
+          }
+          if (options.ignoreDuplicates !== true) {
+            throw new Error("重複データのスキップ設定がありません");
+          }
+        });
+
+        test("入力内の同一企業・同一日付を拒否する", () => {
+          let rejected = false;
+          try {
+            window.stockImporter.savePrices([
+              { ...base, company_id: 1 },
+              { ...base, company_id: 1 }
+            ]);
+          } catch (error) {
+            rejected = true;
+          }
+          if (!rejected) {
+            throw new Error("重複入力が拒否されませんでした");
+          }
+        });
+
+        test("不正な終値を拒否する", () => {
+          let rejected = false;
+          try {
+            window.stockImporter.validatePrice({
+              ...base,
+              company_id: 1,
+              close_price: 0
+            });
+          } catch (error) {
+            rejected = true;
+          }
+          if (!rejected) {
+            throw new Error("終値0が拒否されませんでした");
+          }
+        });
+
       } catch (error) {
-        rejected = true;
+        results.push({
+          name: "テスト実行",
+          pass: false,
+          message: error.message
+        });
+      } finally {
+        window.supabaseClient = originalClient;
       }
 
-      if (!rejected) {
-        throw new Error("不正データが拒否されませんでした");
-      }
+      const passed = results.filter(item => item.pass).length;
+      const failed = results.length - passed;
+
+      document.getElementById("results").innerHTML =
+        `<h2>${passed}/${results.length} 件成功</h2>` +
+        `<p class="${failed ? "fail" : "pass"}">` +
+        (failed ? `${failed} 件失敗` : "すべてのテストに成功") +
+        `</p><pre>${results.map(item =>
+          `${item.pass ? "PASS" : "FAIL"}：${item.name}` +
+          (item.message ? `（${item.message}）` : "")
+        ).join("\n")}</pre>`;
     }
 
-    const validRecord = {
-      company_id: 1,
-      target_date: "2026-10-26",
-      close_price: 6550,
-      volume: 1000,
-      source: "test"
-    };
-
-    test("正常な株価データを受け入れる", () => {
-      window.stockImporter.validatePrice(validRecord);
-    });
-
-    test("終値が0なら拒否する", () => {
-      testRejects("終値0", () =>
-        window.stockImporter.validatePrice({
-          ...validRecord,
-          close_price: 0
-        })
-      );
-    });
-
-    test("存在しない日付を拒否する", () => {
-      testRejects("不正日付", () =>
-        window.stockImporter.validatePrice({
-          ...validRecord,
-          target_date: "2026-02-30"
-        })
-      );
-    });
-
-    test("企業IDが文字列なら拒否する", () => {
-      testRejects("不正ID", () =>
-        window.stockImporter.validatePrice({
-          ...validRecord,
-          company_id: "abc"
-        })
-      );
-    });
-
-    const passed = results.filter(item => item.pass).length;
-    const failed = results.length - passed;
-
-    document.getElementById("results").innerHTML =
-      `<h2>${passed}/${results.length} 件成功</h2>` +
-      `<p class="${failed ? "fail" : "pass"}">` +
-      (failed ? `${failed} 件失敗` : "すべてのテストに成功") +
-      `</p><pre>${results.map(item =>
-        `${item.pass ? "PASS" : "FAIL"}：${item.name}` +
-        (item.message ? `（${item.message}）` : "")
-      ).join("\n")}</pre>`;
+    runTests();
   </script>
 </body>
 </html>
