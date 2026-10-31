@@ -15,6 +15,9 @@
       font-size: 16px;
       margin: 12px 0;
     }
+    button:disabled {
+      opacity: 0.5;
+    }
     #result {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -45,24 +48,46 @@
       result.textContent = "実行中...";
 
       try {
+        // Supabaseクライアント確認
+        if (!window.supabaseClient) {
+          throw new Error(
+            "Supabaseクライアントが見つかりません。設定ファイルを確認してください。"
+          );
+        }
+
+        // ログイン確認
         const { data, error } =
           await window.supabaseClient.auth.getUser();
 
         if (error) throw error;
 
         if (!data.user) {
-          throw new Error("ログインしていません。企業図鑑でログインしてください。");
+          throw new Error(
+            "ログインセッションがありません。企業図鑑でログインしてください。"
+          );
         }
 
-        if (data.user.id !==
-          "df31695c-e9ff-4096-9197-ff79c3056604") {
-          throw new Error("ログインアカウントがテスト対象と異なります。");
+        // アカウント確認
+        if (
+          data.user.id !==
+          "df31695c-e9ff-4096-9197-ff79c3056604"
+        ) {
+          throw new Error(
+            "ログインアカウントがテスト対象と異なります。"
+          );
         }
 
-        if (typeof window.savePrices !== "function") {
-          throw new Error("savePrices関数が見つかりません。");
+        // 株価保存機能の確認
+        if (
+          !window.StockImport ||
+          typeof window.StockImport.savePrices !== "function"
+        ) {
+          throw new Error(
+            "StockImport.savePrices が見つかりません。stock-import.jsを確認してください。"
+          );
         }
 
+        // テスト用株価データ
         const testRecord = {
           company_id: 1,
           target_date: "2026-10-20",
@@ -74,10 +99,12 @@
           source: "live_test"
         };
 
-        const saveResult = await window.savePrices([testRecord]);
+        // 実DBへ保存
+        const saveResult =
+          await window.StockImport.savePrices([testRecord]);
 
         result.textContent =
-          "保存処理が完了しました。\n\n" +
+          "保存処理の結果\n\n" +
           JSON.stringify(saveResult, null, 2);
 
       } catch (error) {
