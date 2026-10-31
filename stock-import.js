@@ -295,10 +295,9 @@ window.stockImporter = (() => {
       message: "株価保存・取得状態更新が完了しました。"
     };
   }
-
-  return {
+  
+        window.StockImport = {
     validatePrice,
     savePrices
   };
-
 })();
