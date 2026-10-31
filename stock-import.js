@@ -1,4 +1,3 @@
-
 /**
  * 若旦那版・企業図鑑
  * 株価データ取込の共通処理
@@ -7,7 +6,7 @@
  * 株価保存・処理ログ・取得状態管理を行う。
  */
 
-window.stockImporter = (() => {
+window.StockImport = (() => {
 
   /**
    * 株価データの検証
@@ -102,9 +101,6 @@ window.stockImporter = (() => {
 
   /**
    * 企業・対象日ごとの取得状態を更新
-   *
-   * 部分ユニークインデックスを使用しているため、
-   * select → update / insert の順で処理する。
    */
   async function updateAcquisitionStatus(client, record) {
     const now = new Date().toISOString();
@@ -157,8 +153,6 @@ window.stockImporter = (() => {
 
   /**
    * 株価データを保存し、処理ログと取得状態を記録する
-   *
-   * 同一企業・同一日付のデータは上書きしない。
    */
   async function savePrices(records) {
     const client = window.supabaseClient;
@@ -295,9 +289,11 @@ window.stockImporter = (() => {
       message: "株価保存・取得状態更新が完了しました。"
     };
   }
-  
-        window.StockImport = {
+
+  // 外部から利用する機能を公開
+  return {
     validatePrice,
     savePrices
   };
+
 })();
