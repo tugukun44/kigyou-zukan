@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>実DB保存テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      line-height: 1.7;
+    }
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      margin: 12px 0;
+    }
+    #result {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f1f1f1;
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>実DB保存テスト</h2>
+  <p>対象：信越化学工業（4063）</p>
+  <p>会社ID：1</p>
+  <p>テスト日：2026-10-20</p>
+
+  <button id="test-button">実DB保存テストを実行</button>
+  <div id="result">まだ実行していません。</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="stock-import.js"></script>
+
+  <script>
+    const result = document.getElementById("result");
+    const button = document.getElementById("test-button");
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      result.textContent = "実行中...";
+
+      try {
+        const { data, error } =
+          await window.supabaseClient.auth.getUser();
+
+        if (error) throw error;
+
+        if (!data.user) {
+          throw new Error("ログインしていません。企業図鑑でログインしてください。");
+        }
+
+        if (data.user.id !==
+          "df31695c-e9ff-4096-9197-ff79c3056604") {
+          throw new Error("ログインアカウントがテスト対象と異なります。");
+        }
+
+        if (typeof window.savePrices !== "function") {
+          throw new Error("savePrices関数が見つかりません。");
+        }
+
+        const testRecord = {
+          company_id: 1,
+          target_date: "2026-10-20",
+          open_price: 6550,
+          high_price: 6600,
+          low_price: 6500,
+          close_price: 6555,
+          volume: 1000000,
+          source: "live_test"
+        };
+
+        const saveResult = await window.savePrices([testRecord]);
+
+        result.textContent =
+          "保存処理が完了しました。\n\n" +
+          JSON.stringify(saveResult, null, 2);
+
+      } catch (error) {
+        result.textContent =
+          "エラーが発生しました。\n\n" +
+          (error.message || String(error));
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
