@@ -1,9 +1,10 @@
+
 /**
  * 若旦那版・企業図鑑
- * 株価データ取込の共通処理
+ * 株価データ保存処理
  *
- * 現段階では実データ取得は行わない。
- * 株価保存・処理ログ・取得状態管理を行う。
+ * 共通形式に変換された株価データを保存する。
+ * 処理ログと取得状態も管理する。
  */
 
 window.StockImport = (() => {
@@ -79,6 +80,14 @@ window.StockImport = (() => {
     ) {
       throw new Error("source は文字列で指定してください。");
     }
+
+    if (
+      record.fetched_at !== undefined &&
+      record.fetched_at !== null &&
+      !Number.isFinite(Date.parse(record.fetched_at))
+    ) {
+      throw new Error("fetched_at の日時形式が不正です。");
+    }
   }
 
   /**
@@ -105,6 +114,10 @@ window.StockImport = (() => {
   async function updateAcquisitionStatus(client, record) {
     const now = new Date().toISOString();
 
+    const fetchedAt = record.fetched_at
+      ? new Date(record.fetched_at).toISOString()
+      : null;
+
     const { data, error: selectError } = await client
       .from("data_acquisition_statuses")
       .select("id")
@@ -126,6 +139,10 @@ window.StockImport = (() => {
       last_confirmed_at: now,
       updated_at: now
     };
+
+    if (fetchedAt) {
+      statusData.last_data_fetched_at = fetchedAt;
+    }
 
     let result;
 
@@ -190,7 +207,10 @@ window.StockImport = (() => {
       low_price: record.low_price ?? null,
       close_price: Number(record.close_price),
       volume: record.volume ?? null,
-      source: record.source || "unknown"
+      source: record.source || "unknown",
+      fetched_at: record.fetched_at
+        ? new Date(record.fetched_at).toISOString()
+        : null
     }));
 
     // 1. 処理開始ログ
@@ -290,7 +310,6 @@ window.StockImport = (() => {
     };
   }
 
-  // 外部から利用する機能を公開
   return {
     validatePrice,
     savePrices
