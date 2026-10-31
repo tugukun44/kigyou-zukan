@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>株価取込テスト</title>
+  <title>株価取込処理テスト</title>
   <style>
     body {
       font-family: sans-serif;
@@ -12,23 +12,15 @@
       line-height: 1.6;
       overflow-wrap: anywhere;
     }
-
-    .pass {
-      color: green;
-    }
-
-    .fail {
-      color: red;
-    }
-
-    pre {
-      white-space: pre-wrap;
-    }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { white-space: pre-wrap; }
   </style>
 </head>
 <body>
   <h1>株価取込処理テスト</h1>
-  <p>Supabaseへの実保存は行いません。</p>
+  <p>このテストは偽のSupabaseクライアントを使用します。</p>
+  <p>実際のSupabaseへの保存は行いません。</p>
   <div id="results">テスト実行中...</div>
 
   <script src="stock-import.js"></script>
@@ -39,10 +31,7 @@
       return Promise.resolve()
         .then(callback)
         .then(() => {
-          results.push({
-            name,
-            pass: true
-          });
+          results.push({ name, pass: true });
         })
         .catch(error => {
           results.push({
@@ -55,23 +44,123 @@
 
     async function runTests() {
       const originalClient = window.supabaseClient;
-      const calls = [];
+
+      const calls = {
+        prices: [],
+        logs: [],
+        statuses: []
+      };
+
+      let nextId = 1;
 
       function createFakeClient() {
         return {
           from(table) {
-            if (table !== "stock_prices") {
-              throw new Error("想定外のテーブルです");
+            if (
+              ![
+                "stock_prices",
+                "collection_logs",
+                "data_acquisition_statuses"
+              ].includes(table)
+            ) {
+              throw new Error("想定外のテーブルです：" + table);
             }
 
             return {
               upsert(payload, options) {
-                calls.push({ payload, options });
+                calls.prices.push({ payload, options });
 
                 return Promise.resolve({
                   error: null,
                   count: payload.length
                 });
+              },
+
+              insert(payload) {
+                if (table === "collection_logs") {
+                  const row = {
+                    id: nextId++,
+                    ...payload
+                  };
+
+                  calls.logs.push(row);
+
+                  return {
+                    select() {
+                      return {
+                        single: async () => ({
+                          data: { id: row.id },
+                          error: null
+                        })
+                      };
+                    }
+                  };
+                }
+
+                if (table === "data_acquisition_statuses") {
+                  calls.statuses.push(payload);
+
+                  return Promise.resolve({
+                    error: null
+                  });
+                }
+
+                throw new Error("想定外のinsertです");
+              },
+
+              select() {
+                const filters = {};
+
+                const query = {
+                  eq(column, value) {
+                    filters[column] = value;
+                    return query;
+                  },
+
+                  maybeSingle: async () => {
+                    const found = calls.statuses.find(row =>
+                      row.data_kind === filters.data_kind &&
+                      row.scope_type === filters.scope_type &&
+                      row.scope_key === filters.scope_key &&
+                      row.target_date === filters.target_date
+                    );
+
+                    return {
+                      data: found ? { id: found.id } : null,
+                      error: null
+                    };
+                  }
+                };
+
+                return query;
+              },
+
+              update(payload) {
+                return {
+                  eq: async (column, value) => {
+                    if (table === "collection_logs") {
+                      const row = calls.logs.find(
+                        item => item[column] === value
+                      );
+
+                      if (row) {
+                        Object.assign(row, payload);
+                      }
+                    }
+
+                    if (table === "data_acquisition_statuses") {
+                      const row = calls.statuses.find(
+                        item => item[column] === value
+                      );
+
+                      if (row) {
+                        Object.assign(row, payload);
+                      }
+                    }
+
+                    return { error: null };
+                  }
+                };
               }
             };
           }
@@ -88,23 +177,22 @@
         window.supabaseClient = createFakeClient();
 
         await test(
-          "複数銘柄をまとめて保存要求できる",
+          "複数銘柄の株価保存要求ができる",
           async () => {
-            const result =
-              await window.stockImporter.savePrices([
-                { ...base, company_id: 1 },
-                {
-                  ...base,
-                  company_id: 2,
-                  close_price: 3000
-                }
-              ]);
+            const result = await window.stockImporter.savePrices([
+              { ...base, company_id: 1 },
+              {
+                ...base,
+                company_id: 2,
+                close_price: 3000
+              }
+            ]);
 
-            if (calls.length !== 1) {
-              throw new Error("保存要求が1回ではありません");
+            if (calls.prices.length !== 1) {
+              throw new Error("株価保存要求が1回ではありません");
             }
 
-            if (calls[0].payload.length !== 2) {
+            if (calls.prices[0].payload.length !== 2) {
               throw new Error("2件のデータが送られていません");
             }
 
@@ -117,16 +205,58 @@
         await test(
           "企業IDと日付を重複判定キーに指定する",
           () => {
-            const options = calls[0].options;
+            const options = calls.prices[0].options;
 
-            if (
-              options.onConflict !== "company_id,target_date"
-            ) {
+            if (options.onConflict !== "company_id,target_date") {
               throw new Error("重複判定キーが不正です");
             }
 
             if (options.ignoreDuplicates !== true) {
-              throw new Error("重複データのスキップ設定がありません");
+              throw new Error("重複スキップ設定がありません");
+            }
+          }
+        );
+
+        await test(
+          "処理開始ログと成功ログが記録される",
+          () => {
+            if (calls.logs.length !== 1) {
+              throw new Error("処理ログが1件ではありません");
+            }
+
+            if (calls.logs[0].status !== "success") {
+              throw new Error("終了状態がsuccessではありません");
+            }
+
+            if (!calls.logs[0].finished_at) {
+              throw new Error("終了時刻が記録されていません");
+            }
+          }
+        );
+
+        await test(
+          "銘柄ごとの取得状態が記録される",
+          () => {
+            if (calls.statuses.length !== 2) {
+              throw new Error("取得状態が2件記録されていません");
+            }
+
+            const row = calls.statuses[0];
+
+            if (row.data_kind !== "stock_price") {
+              throw new Error("データ種別が不正です");
+            }
+
+            if (row.processing_status !== "success") {
+              throw new Error("取得状態がsuccessではありません");
+            }
+
+            if (row.data_presence !== "present") {
+              throw new Error("データ有無がpresentではありません");
+            }
+
+            if (row.freshness !== "unknown") {
+              throw new Error("鮮度がunknownではありません");
             }
           }
         );
@@ -134,7 +264,7 @@
         await test(
           "入力内の同一企業・同一日付を拒否する",
           async () => {
-            const callsBefore = calls.length;
+            const before = calls.prices.length;
             let rejected = false;
 
             try {
@@ -150,7 +280,7 @@
               throw new Error("重複入力が拒否されませんでした");
             }
 
-            if (calls.length !== callsBefore) {
+            if (calls.prices.length !== before) {
               throw new Error("重複データが保存要求されました");
             }
           }
@@ -187,8 +317,7 @@
         window.supabaseClient = originalClient;
       }
 
-      const passed =
-        results.filter(item => item.pass).length;
+      const passed = results.filter(item => item.pass).length;
       const failed = results.length - passed;
 
       document.getElementById("results").innerHTML =
@@ -202,11 +331,7 @@
         `</p><pre>` +
         results.map(item =>
           `${item.pass ? "PASS" : "FAIL"}：${item.name}` +
-          (
-            item.message
-              ? `（${item.message}）`
-              : ""
-          )
+          (item.message ? `（${item.message}）` : "")
         ).join("\n") +
         `</pre>`;
     }
@@ -215,4 +340,3 @@
   </script>
 </body>
 </html>
-
