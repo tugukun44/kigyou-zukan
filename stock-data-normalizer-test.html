@@ -1,0 +1,187 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>株価データ変換テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      line-height: 1.7;
+    }
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      margin: 12px 0;
+    }
+    #result {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f1f1f1;
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>株価データ変換テスト</h2>
+  <p>対象：信越化学工業（4063）</p>
+
+  <button id="test-button">変換テストを実行</button>
+  <div id="result">まだ実行していません。</div>
+
+  <script src="stock-data-normalizer.js"></script>
+
+  <script>
+    const result = document.getElementById("result");
+    const button = document.getElementById("test-button");
+
+    button.addEventListener("click", () => {
+      const messages = [];
+      let successCount = 0;
+      let failureCount = 0;
+
+      function test(name, callback) {
+        try {
+          callback();
+          messages.push("【成功】" + name);
+          successCount++;
+        } catch (error) {
+          messages.push("【失敗】" + name + "\n" + error.message);
+          failureCount++;
+        }
+      }
+
+      try {
+        if (!window.StockDataNormalizer) {
+          throw new Error(
+            "StockDataNormalizer が見つかりません。"
+          );
+        }
+
+        const normalizer = window.StockDataNormalizer;
+
+        const validRecord = {
+          company_id: 1,
+          target_date: "2026-10-30",
+          open_price: 6500,
+          high_price: 6600,
+          low_price: 6450,
+          close_price: 6550,
+          volume: 1000000,
+          source: "test_provider",
+          fetched_at: "2026-10-31T13:00:00Z"
+        };
+
+        test("正常な株価データを変換できる", () => {
+          const converted =
+            normalizer.normalizePriceRecord(validRecord);
+
+          if (converted.company_id !== 1) {
+            throw new Error("company_id が一致しません。");
+          }
+
+          if (converted.close_price !== 6550) {
+            throw new Error("close_price が一致しません。");
+          }
+
+          if (converted.source !== "test_provider") {
+            throw new Error("source が一致しません。");
+          }
+
+          if (!converted.fetched_at) {
+            throw new Error("fetched_at がありません。");
+          }
+        });
+
+        test("不正な日付を拒否できる", () => {
+          const record = {
+            ...validRecord,
+            target_date: "2026-02-30"
+          };
+
+          let rejected = false;
+
+          try {
+            normalizer.normalizePriceRecord(record);
+          } catch (error) {
+            rejected = true;
+          }
+
+          if (!rejected) {
+            throw new Error("不正な日付が拒否されませんでした。");
+          }
+        });
+
+        test("高値と安値の逆転を拒否できる", () => {
+          const record = {
+            ...validRecord,
+            high_price: 6400,
+            low_price: 6500
+          };
+
+          let rejected = false;
+
+          try {
+            normalizer.normalizePriceRecord(record);
+          } catch (error) {
+            rejected = true;
+          }
+
+          if (!rejected) {
+            throw new Error("価格の逆転が拒否されませんでした。");
+          }
+        });
+
+        test("複数データの重複を拒否できる", () => {
+          const records = [
+            validRecord,
+            { ...validRecord }
+          ];
+
+          let rejected = false;
+
+          try {
+            normalizer.normalizePriceRecords(records);
+          } catch (error) {
+            rejected = true;
+          }
+
+          if (!rejected) {
+            throw new Error("重複データが拒否されませんでした。");
+          }
+        });
+
+        test("複数の異なる日付をまとめて変換できる", () => {
+          const records = [
+            validRecord,
+            {
+              ...validRecord,
+              target_date: "2026-10-29"
+            }
+          ];
+
+          const converted =
+            normalizer.normalizePriceRecords(records);
+
+          if (converted.length !== 2) {
+            throw new Error("変換件数が2件ではありません。");
+          }
+        });
+
+      } catch (error) {
+        messages.push("【準備エラー】\n" + error.message);
+        failureCount++;
+      }
+
+      messages.push("");
+      messages.push("テスト結果");
+      messages.push("成功：" + successCount + "件");
+      messages.push("失敗：" + failureCount + "件");
+
+      result.textContent = messages.join("\n");
+    });
+  </script>
+</body>
+</html>
