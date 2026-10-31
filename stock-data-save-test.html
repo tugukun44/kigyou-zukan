@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>株価データ保存テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+      background: #f5f5f5;
+    }
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      width: 100%;
+      margin: 12px 0;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: white;
+      padding: 14px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>株価データ保存テスト</h2>
+  <p>
+    正規化したテスト用株価データをSupabaseへ保存します。
+    実際の市場価格ではありません。
+  </p>
+
+  <button id="runButton">保存テストを実行</button>
+  <pre id="result">実行待ち</pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="stock-data-normalizer.js"></script>
+  <script src="stock-import.js"></script>
+
+  <script>
+    const result = document.getElementById("result");
+    const button = document.getElementById("runButton");
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      result.textContent = "テスト実行中...";
+
+      try {
+        const client = window.supabaseClient;
+
+        if (!client) {
+          throw new Error("Supabaseクライアントが見つかりません。");
+        }
+
+        if (!window.StockDataNormalizer) {
+          throw new Error("StockDataNormalizerが見つかりません。");
+        }
+
+        if (!window.StockImport) {
+          throw new Error("StockImportが見つかりません。");
+        }
+
+        // ログインユーザー確認
+        const { data: authData, error: authError } =
+          await client.auth.getUser();
+
+        if (authError) {
+          throw new Error("ログイン確認に失敗：" + authError.message);
+        }
+
+        const user = authData.user;
+
+        if (!user) {
+          throw new Error("ログインしていません。");
+        }
+
+        if (user.id !== "df31695c-e9ff-4096-9197-ff79c3056604") {
+          throw new Error("想定しているユーザーと異なります。");
+        }
+
+        // テスト対象日
+        const targetDate = "2026-10-30";
+
+        // 同じ企業・対象日のデータが既にないか確認
+        const { data: existing, error: checkError } = await client
+          .from("stock_prices")
+          .select("id")
+          .eq("company_id", 1)
+          .eq("target_date", targetDate)
+          .maybeSingle();
+
+        if (checkError) {
+          throw new Error("既存データ確認に失敗：" + checkError.message);
+        }
+
+        if (existing) {
+          throw new Error(
+            "テスト対象日の株価データが既に存在します。保存を中止しました。"
+          );
+        }
+
+        // 架空のテストデータ
+        const rawRecord = {
+          company_id: 1,
+          target_date: targetDate,
+          open_price: 6500,
+          high_price: 6600,
+          low_price: 6450,
+          close_price: 6555,
+          volume: 1000000,
+          source: "adapter_test",
+          fetched_at: new Date().toISOString()
+        };
+
+        // 1. 共通形式に正規化
+        const normalized =
+          window.StockDataNormalizer.normalizePriceRecord(rawRecord);
+
+        // 2. Supabaseへ保存
+        const saveResult =
+          await window.StockImport.savePrices([normalized]);
+
+        result.textContent = JSON.stringify({
+          test: "株価データ保存テスト",
+          user_id: user.id,
+          normalized_record: normalized,
+          save_result: saveResult
+        }, null, 2);
+
+      } catch (error) {
+        result.textContent = "エラー\n" + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
