@@ -101,6 +101,8 @@ async function openCompany(code) {
         <p>${escapeHypothesisText(c.longView)}</p>
       </div>
 
+      <div id="ir-documents-container"></div>
+
       <button class="primary"
         onclick="openHypothesis('${escapeHypothesisText(c.code)}')">
         この会社で仮説トレーニング
@@ -113,8 +115,20 @@ async function openCompany(code) {
     document.getElementById("company-detail")
       .classList.remove("hidden");
 
+    // IR資料一覧を取得して表示
+    const irContainer =
+      document.getElementById("ir-documents-container");
+
+    if (typeof window.loadIRDocuments === "function") {
+      window.loadIRDocuments(data.id, irContainer);
+    } else {
+      irContainer.textContent =
+        "IR資料機能を読み込めませんでした。";
+    }
+
   } catch (error) {
     console.error("企業詳細の取得に失敗しました:", error);
+
     detail.innerHTML = `
       <div class="notice">
         企業情報の取得に失敗しました：
@@ -234,6 +248,7 @@ async function saveHypothesis() {
 
   if (error) {
     console.error("仮説の保存に失敗しました:", error);
+
     result.innerHTML = `
       <div class="notice">
         保存に失敗しました：
@@ -299,7 +314,6 @@ async function renderCompanies() {
       return `
         <div class="card"
           onclick="openCompany('${escapeHypothesisText(company.stock_code)}')">
-
           <h3>${escapeHypothesisText(company.company_name)}</h3>
 
           <div class="meta">
@@ -381,7 +395,6 @@ loginPanel.innerHTML = `
     <button class="primary" type="submit">
       ログインして接続確認
     </button>
-
     <p id="login-result" aria-live="polite"></p>
   </form>
 `;
@@ -450,6 +463,7 @@ async function loadHypothesisHistory() {
 
   if (error) {
     console.error("仮説履歴の取得に失敗しました:", error);
+
     container.textContent =
       "記録の取得に失敗しました：" + error.message;
     return;
